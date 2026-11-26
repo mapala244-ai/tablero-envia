@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Pagos ENVIA — Tiendas Barón</title>
+<style>
+  :root{
+    --bg:#f7f6f3;
+    --panel:#ffffff;
+    --ink:#1f2430;
+    --muted:#6b7280;
+    --line:#e6e3dc;
+    --gold:#9a7b2f;
+    --gold-dk:#7a611f;
+    --green:#1f7a4d;
+    --green-bg:#e6f4ec;
+    --blue:#1d4f8c;
+    --blue-bg:#e7eff9;
+    --amber:#9a6b00;
+    --amber-bg:#fdf2da;
+    --gray-bg:#eceae5;
+    --red:#a33;
+    --red-bg:#fbe9e7;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);}
+  header{
+    background:var(--ink);color:#fff;padding:20px 28px;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  }
+  header h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.2px;}
+  header h1 span{color:#d8b85a;}
+  header .sub{font-size:12px;color:#b9bcc4;margin-top:2px;}
+  main{max-width:1280px;margin:0 auto;padding:24px 20px 60px;}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .card .lbl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+  .card .val{font-size:21px;font-weight:700;}
+  .card .hint{font-size:11px;color:var(--muted);margin-top:3px;}
+  .card.green .val{color:var(--green);}
+  .card.amber .val{color:var(--amber);}
+  .card.gold .val{color:var(--gold-dk);}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:20px;}
+  .panel h2{font-size:14px;margin:0 0 12px;color:var(--ink);text-transform:uppercase;letter-spacing:.4px;}
+  .panel h2 small{text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400;font-size:12px;margin-left:8px;}
+
+  .upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:720px){.upload-grid{grid-template-columns:1fr;}}
+  .upload-box{border:1.5px dashed var(--line);border-radius:8px;padding:16px;text-align:center;}
+  .upload-box p{margin:0 0 10px;font-size:13px;color:var(--muted);}
+  .upload-box label{
+    display:inline-block;background:var(--ink);color:#fff;padding:9px 16px;border-radius:6px;
+    font-size:13px;cursor:pointer;font-weight:500;
+  }
+  .upload-box label:hover{background:#333;}
+  .upload-box input[type=file]{display:none;}
+  .status-msg{margin-top:10px;font-size:12.5px;min-height:16px;line-height:1.5;}
+  .status-msg.ok{color:var(--green);}
+  .status-msg.err{color:var(--red);}
+  .status-msg.busy{color:var(--amber);}
+  .status-msg .det{display:block;color:var(--muted);font-size:11.5px;}
+
+  /* ---- Catálogo de estados ---- */
+  .fase-group{margin-bottom:14px;}
+  .fase-group:last-child{margin-bottom:0;}
+  .fase-title{
+    font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+    margin-bottom:7px;display:flex;align-items:center;gap:7px;
+  }
+  .fase-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .fase-dot.entregada{background:var(--green);}
+  .fase-dot.transito{background:var(--blue);}
+  .fase-dot.problema{background:var(--amber);}
+  .fase-dot.devuelta{background:#9b968c;}
+  .fase-dot.desconocido{background:var(--red);}
+  .estado-chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;
+    background:#fff;text-align:left;min-width:150px;transition:.12s;
+  }
+  .chip:hover{border-color:var(--gold);}
+  .chip.active{border-color:var(--gold);background:#fdfaf2;box-shadow:0 0 0 1px var(--gold);}
+  .chip .cn{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);
+            display:block;margin-bottom:4px;line-height:1.3;}
+  .chip .cv{font-size:16px;font-weight:700;}
+  .chip .cm{font-size:11px;color:var(--muted);margin-left:6px;font-weight:400;}
+  .chip.entregada .cv{color:var(--green);}
+  .chip.transito .cv{color:var(--blue);}
+  .chip.problema .cv{color:var(--amber);}
+  .chip.devuelta .cv{color:#6b6459;}
+  .chip.desconocido{border-color:var(--red);background:var(--red-bg);}
+  .chip.desconocido .cv{color:var(--red);}
+  .nuevo-tag{background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;
+             margin-left:5px;vertical-align:middle;letter-spacing:.3px;}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+  .filters select, .filters input{
+    padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;
+  }
+  .filters input[type=text]{flex:1;min-width:160px;}
+  .btn-refresh{
+    background:var(--gold);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;
+  }
+  .btn-refresh:hover{background:var(--gold-dk);}
+  .btn-clear{
+    background:#fff;color:var(--muted);border:1px solid var(--line);padding:8px 12px;
+    border-radius:6px;cursor:pointer;font-size:13px;
+  }
+  .btn-clear:hover{border-color:var(--ink);color:var(--ink);}
+
+  table{width:100%;border-collapse:collapse;font-size:12.8px;}
+  thead th{
+    text-align:left;padding:9px 10px;background:#fafaf8;border-bottom:2px solid var(--line);
+    color:var(--muted);text-transform:uppercase;font-size:10.5px;letter-spacing:.3px;white-space:nowrap;
+    position:sticky;top:0;z-index:1;
+  }
+  tbody td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody tr:hover{background:#fbfaf7;}
+  .badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;display:inline-block;}
+  .badge.pagada{background:var(--green-bg);color:var(--green);}
+  .badge.pendiente{background:var(--amber-bg);color:var(--amber);}
+  .badge.devuelta{background:var(--gray-bg);color:var(--muted);}
+  .badge.otro{background:var(--red-bg);color:var(--red);}
+  .est{font-size:11.5px;padding:2px 8px;border-radius:4px;display:inline-block;}
+  .est.entregada{background:var(--green-bg);color:var(--green);}
+  .est.transito{background:var(--blue-bg);color:var(--blue);}
+  .est.problema{background:var(--amber-bg);color:var(--amber);}
+  .est.devuelta{background:var(--gray-bg);color:#6b6459;}
+  .est.desconocido{background:var(--red-bg);color:var(--red);font-weight:600;}
+  .nov{color:var(--muted);font-size:11.5px;max-width:230px;overflow:hidden;text-overflow:ellipsis;}
+  .nov.old{opacity:.45;font-style:italic;}
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;}
+  .table-scroll{max-height:560px;overflow-y:auto;}
+  .empty{padding:30px;text-align:center;color:var(--muted);font-size:13px;}
+  .num{text-align:right;}
+  .nota{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5;}
+
+  /* ---- Panel destacado: pendientes de cobro ---- */
+  .panel.destacado{border:2px solid var(--gold);}
+  .panel.destacado h2{color:var(--gold-dk);}
+  .cobro-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+  .cobro-total{font-size:30px;font-weight:700;color:var(--gold-dk);line-height:1;}
+  .cobro-sub{font-size:13px;color:var(--muted);}
+  .edad-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;}
+  .edad-box{border:1px solid var(--line);border-radius:8px;padding:11px 13px;cursor:pointer;background:#fff;text-align:left;}
+  .edad-box:hover{border-color:var(--gold);}
+  .edad-box.active{border-color:var(--gold);background:#fdfaf2;box-shadow:0 0 0 1px var(--gold);}
+  .edad-box .en{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);display:block;margin-bottom:5px;}
+  .edad-box .ev{font-size:18px;font-weight:700;}
+  .edad-box .em{font-size:11.5px;color:var(--muted);display:block;margin-top:2px;}
+  .edad-box .eh{font-size:10.5px;color:var(--muted);display:block;margin-top:6px;line-height:1.35;}
+  .edad-box.ok .ev{color:var(--green);}
+  .edad-box.aviso .ev{color:var(--amber);}
+  .edad-box.reclamo .ev{color:var(--red);}
+  .dias-badge{padding:2px 8px;border-radius:4px;font-weight:600;font-size:11.5px;}
+  .dias-badge.ok{background:var(--green-bg);color:var(--green);}
+  .dias-badge.aviso{background:var(--amber-bg);color:var(--amber);}
+  .dias-badge.reclamo{background:var(--red-bg);color:var(--red);}
+
+  /* ---- Panel: dinero en camino ---- */
+  .panel.camino{border:1px solid var(--blue);}
+  .panel.camino h2{color:var(--blue);}
+  .panel.camino .cobro-total{color:var(--blue);}
+  .edad-box.ruta .ev{color:var(--blue);}
+  .edad-box.atasco .ev{color:var(--amber);}
+  .edad-box.frenado .ev{color:var(--red);}
+
+  /* ---- Panel: dinero frenado ---- */
+  .panel.frenado{border:2px solid var(--red);}
+  .panel.frenado h2{color:var(--red);}
+  .panel.frenado .cobro-total{color:var(--red);}
+  .btn-copiar{
+    margin-left:auto;background:var(--red);color:#fff;border:none;padding:9px 15px;
+    border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;
+  }
+  .btn-copiar:hover{background:#8d2b2b;}
+  .btn-copiar.ok{background:var(--green);}
+  .motivo-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+  .motivo{
+    border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;
+    background:#fff;text-align:left;max-width:260px;
+  }
+  .motivo:hover{border-color:var(--red);}
+  .motivo.active{border-color:var(--red);background:var(--red-bg);box-shadow:0 0 0 1px var(--red);}
+  .motivo .mn{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;
+              color:var(--muted);margin-bottom:4px;line-height:1.3;}
+  .motivo .mv{font-size:15px;font-weight:700;color:var(--red);}
+  .motivo .mc{font-size:11px;color:var(--muted);margin-left:6px;font-weight:400;}
+  .nov-txt{font-size:11.5px;max-width:260px;white-space:normal;line-height:1.35;}
+
+  /* ---- Panel: total por cobrar ---- */
+  .panel.total-cobrar{background:var(--ink);border:none;}
+  .panel.total-cobrar h2{color:#fff;}
+  .panel.total-cobrar h2 small{color:#b9bcc4;}
+  .panel.total-cobrar .nota{color:#b9bcc4;}
+  .tc-grid{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .tc-box{background:#2b3140;border-radius:9px;padding:13px 18px;min-width:190px;flex:1;}
+  .tc-box.fuerte{background:var(--gold-dk);}
+  .tcl{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#b9bcc4;margin-bottom:6px;}
+  .tc-box.fuerte .tcl{color:#f3e4bd;}
+  .tcv{display:block;font-size:23px;font-weight:700;color:#fff;line-height:1.1;}
+  .tcn{display:block;font-size:11.5px;color:#b9bcc4;margin-top:3px;}
+  .tc-box.fuerte .tcn{color:#f3e4bd;}
+  .tc-op{font-size:20px;color:#6b7280;font-weight:700;}
+  @media (max-width:720px){ .tc-op{display:none;} .tc-box{min-width:100%;} }
+
+  footer{text-align:center;color:var(--muted);font-size:11.5px;padding:20px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Control de Pagos <span>ENVIA</span></h1>
+    <div class="sub">Tiendas Barón — estados de guías y cruce con consignaciones</div>
+  </div>
+  <div class="sub" id="lastSync">—</div>
+</header>
+
+<main>
+
+  <div class="cards" id="cards">
+    <div class="card"><div class="lbl">Guías totales</div><div class="val" id="cTotal">0</div></div>
+    <div class="card green"><div class="lbl">Pagadas</div><div class="val" id="cPagadas">0</div></div>
+    <div class="card amber"><div class="lbl">Pendientes de pago</div><div class="val" id="cPendientes">0</div><div class="hint" id="cPendientesVal">$0</div></div>
+    <div class="card"><div class="lbl">Valor producto (bruto)</div><div class="val" id="cValorProducto">$0</div></div>
+    <div class="card"><div class="lbl">Pagado por ENVIA</div><div class="val" id="cPagado">$0</div></div>
+    <div class="card gold"><div class="lbl">Flete total</div><div class="val" id="cFlete">$0</div><div class="hint" id="cFleteSinFact">—</div></div>
+  </div>
+
+  <div class="panel destacado">
+    <h2>Entregadas pendientes de cobro <small>— guías que ENVIA ya entregó pero todavía no consignó</small></h2>
+    <div class="cobro-head">
+      <span class="cobro-total" id="cobroTotal">$0</span>
+      <span class="cobro-sub" id="cobroSub">—</span>
+    </div>
+    <div class="edad-grid" id="edadGrid"></div>
+    <div class="table-wrap">
+      <div class="table-scroll" style="max-height:320px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Guía</th><th>Fec. entrega</th><th class="num">Días sin pago</th>
+              <th class="num">Valor a cobrar</th><th>Destinatario</th><th>Ciudad</th><th>Tel.</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyCobro">
+            <tr><td colspan="7" class="empty">Sin datos.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="nota" id="cobroNota"></div>
+  </div>
+
+  <div class="panel camino">
+    <h2>Dinero en camino <small>— recaudo de guías despachadas que todavía no llegan a destino</small></h2>
+    <div class="cobro-head">
+      <span class="cobro-total" id="caminoTotal">$0</span>
+      <span class="cobro-sub" id="caminoSub">—</span>
+    </div>
+    <div class="edad-grid" id="caminoGrid"></div>
+    <div class="table-wrap">
+      <div class="table-scroll" style="max-height:300px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Guía</th><th>Estado</th><th>Despacho</th><th>Entrega prevista</th>
+              <th class="num">Días de atraso</th><th class="num">Valor</th>
+              <th>Cobro estimado</th><th>Destinatario</th><th>Ciudad</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyCamino">
+            <tr><td colspan="9" class="empty">Sin datos.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="nota" id="caminoNota"></div>
+  </div>
+
+  <div class="panel total-cobrar">
+    <h2>Total por cobrar <small>— todo el recaudo que ENVIA todavía no te ha consignado</small></h2>
+    <div class="tc-grid">
+      <div class="tc-box"><span class="tcl">Ya entregado, falta consignar</span><span class="tcv" id="tcEntregado">$0</span><span class="tcn" id="tcEntregadoN">—</span></div>
+      <div class="tc-op">+</div>
+      <div class="tc-box"><span class="tcl">Todavía en camino</span><span class="tcv" id="tcCamino">$0</span><span class="tcn" id="tcCaminoN">—</span></div>
+      <div class="tc-op">=</div>
+      <div class="tc-box fuerte"><span class="tcl">Total</span><span class="tcv" id="tcTotal">$0</span><span class="tcn" id="tcTotalN">—</span></div>
+    </div>
+    <div class="nota" id="tcNota"></div>
+  </div>
+
+  <div class="panel frenado">
+    <h2>Dinero frenado <small>— guías que no avanzan solas: hay que empujarlas con ENVIA</small></h2>
+    <div class="cobro-head">
+      <span class="cobro-total" id="frenTotal">$0</span>
+      <span class="cobro-sub" id="frenSub">—</span>
+      <button class="btn-copiar" id="btnCopiarFrenado">Copiar lista para ENVIA</button>
+    </div>
+    <div class="motivo-chips" id="frenMotivos"></div>
+    <div class="table-wrap">
+      <div class="table-scroll" style="max-height:340px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Guía</th><th class="num">Atraso</th><th class="num">Valor</th>
+              <th>Estado</th><th>Novedad</th><th>Fec. novedad</th>
+              <th>Destinatario</th><th>Ciudad</th><th>Tel.</th><th>Imput.</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyFrenado">
+            <tr><td colspan="10" class="empty">Sin datos.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="nota" id="frenNota"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Estados de ENVIA <small id="estadosResumen">— clic en un estado para filtrar la tabla</small></h2>
+    <div id="catalogoEstados">
+      <div class="empty">Sin datos cargados.</div>
+    </div>
+    <div class="nota">
+      Los estados se leen tal cual los publica ENVIA en la columna <strong>Estado</strong> del archivo.
+      Si aparece uno que el tablero no conoce, se muestra en rojo como <strong>SIN CLASIFICAR</strong> — no se pierde ni se esconde.
+    </div>
+  </div>
+
+  <div class="nota">
+    📊 Vista de solo lectura. Los datos de ENVIA (despachos y pagos) se actualizan
+    <strong>automáticamente cada día</strong> desde el computador de Tiendas Barón.
+    Aquí solo se consultan: esta página no modifica nada.
+  </div>
+
+  <div class="panel">
+    <h2>Guías</h2>
+    <div class="filters">
+      <select id="fEstadoEnvia"><option value="">Todos los estados de ENVIA</option></select>
+      <select id="fPago">
+        <option value="">Todos los estados de pago</option>
+        <option value="PAGADA">Pagada</option>
+        <option value="PENDIENTE">Pendiente de pago</option>
+        <option value="DEVUELTA">Devuelta</option>
+        <option value="OTRO">Sin entregar / en proceso</option>
+      </select>
+      <input type="text" id="fBusqueda" placeholder="Buscar por guía, destinatario o ciudad...">
+      <button class="btn-clear" id="btnClear">Limpiar filtros</button>
+      <button class="btn-refresh" id="btnRefresh">Actualizar tablero</button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Guía</th>
+              <th>Estado ENVIA</th>
+              <th>Última novedad</th>
+              <th>Estado pago</th>
+              <th>Destinatario</th>
+              <th>Ciudad</th>
+              <th>Fec. despacho</th>
+              <th>Fec. entrega</th>
+              <th class="num">Días</th>
+              <th class="num">Valor producto</th>
+              <th class="num">Flete+costos</th>
+              <th>Factura</th>
+              <th>Num. traslado</th>
+              <th>Fec. pago</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="14" class="empty">Cargando datos del tablero...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="nota" id="tablaResumen"></div>
+    <div class="nota">
+      <strong>Nota sobre "Última novedad":</strong> ENVIA deja registrada la última novedad aunque la guía ya se haya entregado.
+      En las guías entregadas aparece atenuada porque es historia, no un problema abierto.
+    </div>
+  </div>
+
+</main>
+
+<footer>Control de Pagos ENVIA · Tiendas Barón</footer>
+
+<script>
+// ====== CONFIGURACIÓN SUPABASE ======
+const SUPABASE_URL = "https://idxinayojtbxjovvliwh.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_z0QIufdHXkSfgBi_vi-Ehg_Nvmn4cRY";
+// =====================================
+
+const headersSb = {
+  "apikey": SUPABASE_ANON_KEY,
+  "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+  "Content-Type": "application/json"
+};
+
+let guiasData = [];
+let pagosData = [];
+let filtroEstadoEnvia = "";
+
+// ====== CATÁLOGO DE ESTADOS DE ENVIA ======
+// Los 13 estados observados en los archivos reales de ENVIA (ene–jul 2026).
+// Cualquier estado nuevo que ENVIA publique cae en "desconocido" y se resalta en rojo.
+const FASE_DE_ESTADO = {
+  "ENTREGADA DIGITALIZADA":      "entregada",
+  "ENTREGADA":                   "entregada",
+
+  "EN BODEGA ORIGEN":            "transito",
+  "DESPACHADA":                  "transito",
+  "EN REEXPEDICION":             "transito",
+  "REDIRECCIONADO":              "transito",
+  "SOLUCIONADA EN MALLA":        "transito",
+  "EN ESPERA DE RUTA DOMESTICA": "transito",
+  "EN BODEGA DESTINO":           "transito",
+  "EN REPARTO":                  "transito",
+
+  "NOVEDAD":                     "problema",
+  "EN PROCESO DE INDEMNIZACION": "problema",
+
+  "DEVUELTA":                    "devuelta"
+};
+
+const FASE_LABEL = {
+  entregada:   "Entregadas",
+  transito:    "En tránsito",
+  problema:    "Con problema",
+  devuelta:    "Devueltas",
+  desconocido: "Sin clasificar — estado nuevo de ENVIA"
+};
+const FASE_ORDEN = ["desconocido","problema","transito","entregada","devuelta"];
+
+// Avance físico del envío. Sirve para no retroceder una guía al subir un archivo viejo.
+// NOVEDAD comparte rango con EN REPARTO a propósito: una novedad puede aparecer y
+// resolverse en cualquier momento del reparto, así que ese ida y vuelta debe permitirse.
+const RANK_ESTADO = {
+  "EN BODEGA ORIGEN":            1,
+  "DESPACHADA":                  2,
+  "EN REEXPEDICION":             3,
+  "REDIRECCIONADO":              3,
+  "SOLUCIONADA EN MALLA":        3,
+  "EN ESPERA DE RUTA DOMESTICA": 4,
+  "EN BODEGA DESTINO":           4,
+  "EN REPARTO":                  5,
+  "NOVEDAD":                     5,
+  "EN PROCESO DE INDEMNIZACION": 8,
+  "DEVUELTA":                    9,   // terminal
+  "ENTREGADA":                  10,   // terminal
+  "ENTREGADA DIGITALIZADA":     10    // terminal
+};
+const RANK_DESCONOCIDO = -1;  // estado que ENVIA no usaba antes: nunca bloquea ni se bloquea
+
+function normEstado(s){
+  return (s || "").toUpperCase().replace(/\s+/g," ").replace(/\.+$/,"").trim();
+}
+function faseDe(estado){
+  return FASE_DE_ESTADO[normEstado(estado)] || "desconocido";
+}
+function rankDe(estado){
+  const r = RANK_ESTADO[normEstado(estado)];
+  return r === undefined ? RANK_DESCONOCIDO : r;
+}
+// ¿El estado `nuevo` es un retroceso respecto de `actual`?
+// Si alguno de los dos no está catalogado, no bloqueamos: preferimos registrar el dato.
+function esRetroceso(actual, nuevo){
+  const a = rankDe(actual), n = rankDe(nuevo);
+  if (a === RANK_DESCONOCIDO || n === RANK_DESCONOCIDO) return false;
+  return n < a;
+}
+
+// Compara qué snapshot es más nuevo. 1 = `a` más reciente, -1 = `b` más reciente, 0 = no se sabe.
+function compararCorte(a, b){
+  if (!a || !b) return 0;
+  return a > b ? 1 : (a < b ? -1 : 0);
+}
+
+// Decide si una fila entrante debe pisar lo que ya está en la base.
+// Manda la fecha de corte del archivo; el rango de estado solo desempata.
+function decidir(prevEstado, prevCorte, nuevoEstado, nuevoCorte){
+  const cmp = compararCorte(nuevoCorte, prevCorte);
+  if (cmp > 0) return "aplicar";                                   // archivo más nuevo: es la verdad
+  if (cmp < 0) return "omitir-viejo";                              // archivo más viejo: no lo piso
+  return esRetroceso(prevEstado, nuevoEstado) ? "omitir-retroceso" : "aplicar";
+}
+function esEntregada(estado){
+  return faseDe(estado) === "entregada";
+}
+
+// ---------- Utilidades de parseo ----------
+
+function parseXlsHtml(text) {
+  const trMatches = text.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
+  return trMatches.map(tr => {
+    const tdMatches = tr.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi) || [];
+    return tdMatches.map(td => {
+      let inner = td.replace(/^<t[dh][^>]*>/i, "").replace(/<\/t[dh]>$/i, "");
+      inner = inner.replace(/<!--[\s\S]*?-->/g, "");
+      inner = inner.replace(/<[^>]+>/g, "");
+      inner = inner.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+                   .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+      inner = inner.replace(/ /g, " ").trim();
+      if (inner.startsWith("'")) inner = inner.slice(1);
+      return inner.trim();
+    });
+  });
+}
+
+function rowsToObjects(rows) {
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(r => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (r[i] !== undefined ? r[i] : ""));
+    return obj;
+  });
+}
+
+function normGuia(s) {
+  return (s || "").replace(/\D/g, "");
+}
+
+function parseNum(s) {
+  if (!s) return 0;
+  const clean = String(s).replace(/\./g, "").replace(/,/g, ".").replace(/[^\d.-]/g, "");
+  const n = parseFloat(clean);
+  return isNaN(n) ? 0 : n;
+}
+
+function parseFechaCO(s) {
+  if (!s || !s.trim()) return null;
+  const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!m) return null;
+  const [, d, mo, y] = m;
+  return `${y}-${mo.padStart(2,"0")}-${d.padStart(2,"0")}`;
+}
+
+function diasEntre(a, b) {
+  if (!a || !b) return null;
+  const d = (new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000;
+  return isNaN(d) ? null : Math.round(d);
+}
+function hoyISO(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function esc(s){
+  return String(s === null || s === undefined ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function mesMasComun(fechas) {
+  const counts = {};
+  fechas.forEach(f => {
+    if (!f) return;
+    const m = f.match(/^\d{4}-(\d{2})/);
+    if (m) counts[m[1]] = (counts[m[1]] || 0) + 1;
+  });
+  let best = null, bestCount = 0;
+  for (const k in counts) { if (counts[k] > bestCount) { best = k; bestCount = counts[k]; } }
+  const meses = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  return best ? meses[parseInt(best,10)] : "Sin fecha";
+}
+
+// ---------- Carga: Enviados / estados de guías ----------
+
+document.getElementById("fileEnviados")?.addEventListener("change", async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  const statusEl = document.getElementById("statusEnviados");
+  statusEl.className = "status-msg busy";
+  statusEl.textContent = "Leyendo archivo(s)...";
+
+  try {
+    // Estado actual en la base, para decidir qué se actualiza y qué se omite.
+    const previos = {};
+    (await supabaseSelect("envia_guias", "guia,estado,fec_corte"))
+      .forEach(r => previos[r.guia] = { estado: r.estado, fec_corte: r.fec_corte });
+
+    let nuevas = 0, actualizadas = 0, iguales = 0, omitViejo = 0, omitRetro = 0, total = 0;
+    const estadosVistos = {};
+    const desconocidos = new Set();
+    const cortes = [];
+    const acumulado = {};   // guía -> fila ganadora entre todos los archivos de este lote
+
+    for (const file of files) {
+      const text = await file.text();
+      const objs = rowsToObjects(parseXlsHtml(text));
+      if (!objs.length) throw new Error(`${file.name}: no se encontraron filas.`);
+
+      const filas = objs.map(o => ({
+        guia: normGuia(o["Guia"]),
+        estado: normEstado(o["Estado"]),
+        fec_captura: parseFechaCO(o["Fec_Captura"]),
+        fec_entrega: parseFechaCO(o["Fec_Entrega"]),
+        fec_aprox_entrega: parseFechaCO(o["Fec_AproxEntrega"]),
+        dias_prometidos: o["Dias_Prometidos"] || "",
+        nombre_destinatario: o["Nombre_Destinatario"] || "",
+        ciudad_destino: o["Ciudad_Destino"] || "",
+        tel_destinatario: o["Tel_Destinatario"] || "",
+        ced_destinatario: o["Ced_Destinatario"] || "",
+        valor_declarado: parseNum(o["Valor_Declarado"]),
+        valor_flete: parseNum(o["Valor_Flete"]),
+        valor_costom: parseNum(o["Valor_CostoM"]),
+        valor_otros: parseNum(o["Valor_Otros"]),
+        total_flete: parseNum(o["Total"]),
+        valor_producto: parseNum(o["Valor_Producto"]),
+        factura: o["Factura"] || "",
+        des_novedad: o["Des_Novedad"] || "",
+        tipo_novedad: o["Tipo_Novedad"] || "",
+        cod_novedad: o["Cod_Novedad"] || "",
+        fec_novedad: parseFechaCO(o["Fec_Novedad"]),
+        imputabilidad: o["Imputabilidad"] || "",
+        archivo_origen: file.name,
+        estado_actualizado_en: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })).filter(r => r.guia);
+
+      const mes = mesMasComun(filas.map(r => r.fec_captura));
+
+      // Fecha de corte del archivo: la fecha más reciente que aparece dentro de él.
+      // Aproxima cuándo lo exportó ENVIA y permite saber qué snapshot es más nuevo.
+      let corte = null;
+      filas.forEach(r => {
+        [r.fec_captura, r.fec_entrega, r.fec_novedad].forEach(f => {
+          if (f && (!corte || f > corte)) corte = f;
+        });
+      });
+      cortes.push(`${file.name} → ${corte || "sin fecha"}`);
+
+      filas.forEach(r => {
+        r.mes_archivo = mes;
+        r.fec_corte = corte;
+        total++;
+        estadosVistos[r.estado] = (estadosVistos[r.estado] || 0) + 1;
+        if (faseDe(r.estado) === "desconocido") desconocidos.add(r.estado);
+        // dentro del mismo lote, gana la fila del archivo más nuevo
+        const prev = acumulado[r.guia];
+        if (!prev || decidir(prev.estado, prev.fec_corte, r.estado, r.fec_corte) === "aplicar") {
+          acumulado[r.guia] = r;
+        }
+      });
+    }
+
+    const payload = [];
+    Object.values(acumulado).forEach(r => {
+      const ant = previos[r.guia];
+      if (ant === undefined) { nuevas++; payload.push(r); return; }
+      const veredicto = decidir(ant.estado, ant.fec_corte, r.estado, r.fec_corte);
+      if (veredicto === "omitir-viejo")     { omitViejo++; return; }
+      if (veredicto === "omitir-retroceso") { omitRetro++; return; }
+      if (normEstado(ant.estado) === r.estado) { iguales++; } else { actualizadas++; }
+      payload.push(r);
+    });
+
+    await supabaseUpsert("envia_guias", payload, "guia");
+
+    const listaEstados = Object.entries(estadosVistos)
+      .sort((a,b) => b[1]-a[1])
+      .map(([k,v]) => `${k} (${v})`).join(" · ");
+
+    statusEl.className = "status-msg ok";
+    statusEl.innerHTML =
+      `✓ ${files.length} archivo(s), ${total} fila(s) leída(s).` +
+      `<span class="det">${nuevas} nuevas · ${actualizadas} con estado actualizado · ${iguales} sin cambio` +
+      (omitViejo ? ` · <strong>${omitViejo} de archivo más viejo</strong>` : "") +
+      (omitRetro ? ` · <strong>${omitRetro} sin retroceder</strong>` : "") + `</span>` +
+      `<span class="det">Corte del archivo: ${esc(cortes.join(" · "))}</span>` +
+      `<span class="det">Estados en el archivo: ${esc(listaEstados)}</span>` +
+      (desconocidos.size ? `<span class="det" style="color:var(--red)">⚠ Estado(s) no catalogado(s): ${esc([...desconocidos].join(", "))}</span>` : "");
+
+    e.target.value = "";
+    await cargarTablero();
+  } catch (err) {
+    statusEl.className = "status-msg err";
+    statusEl.textContent = "Error: " + err.message;
+  }
+});
+
+// ---------- Carga: Pagos ----------
+
+document.getElementById("filePagos")?.addEventListener("change", async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  const statusEl = document.getElementById("statusPagos");
+  statusEl.className = "status-msg busy";
+  statusEl.textContent = "Leyendo archivo(s)...";
+  try {
+    const acumulado = {};
+    let total = 0;
+    for (const file of files) {
+      const objs = rowsToObjects(parseXlsHtml(await file.text()));
+      if (!objs.length) throw new Error(`${file.name}: no se encontraron filas.`);
+      objs.forEach(o => {
+        const guia = normGuia(o["Guia"]);
+        if (!guia) return;
+        total++;
+        acumulado[guia] = {
+          guia,
+          num_traslado: o["Num_Traslado"] || "",
+          fec_traslado: parseFechaCO(o["Fec_Traslado"]),
+          valor_producto: parseNum(o["Valor_Producto"]),
+          nombre_destinatario: o["Nom_Destinatario"] || "",
+          ciudad_destino: o["CiudadDestino"] || "",
+          tel_destinatario: o["Tel_Destinatario"] || "",
+          archivo_origen: file.name,
+          updated_at: new Date().toISOString()
+        };
+      });
+    }
+    const payload = Object.values(acumulado);
+    await supabaseUpsert("envia_pagos", payload, "guia");
+
+    statusEl.className = "status-msg ok";
+    statusEl.innerHTML = `✓ ${files.length} archivo(s), ${total} fila(s) leída(s).` +
+      `<span class="det">${payload.length} guía(s) con pago registrado.</span>`;
+    e.target.value = "";
+    await cargarTablero();
+  } catch (err) {
+    statusEl.className = "status-msg err";
+    statusEl.textContent = "Error: " + err.message;
+  }
+});
+
+// ---------- Supabase ----------
+
+async function supabaseUpsert(table, rows, conflictCol) {
+  if (!rows.length) return;
+  const chunkSize = 500;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictCol}`, {
+      method: "POST",
+      headers: { ...headersSb, "Prefer": "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify(chunk)
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Supabase (${table}): ${resp.status} ${errText}`);
+    }
+  }
+}
+
+async function supabaseSelect(table, select = "*") {
+  let all = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${select}&order=guia`, {
+      headers: { ...headersSb, "Range-Unit": "items", "Range": `${from}-${from + pageSize - 1}` }
+    });
+    if (!resp.ok) throw new Error(`Error leyendo ${table}: ${resp.status}`);
+    const data = await resp.json();
+    all = all.concat(data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
+// ---------- Tablero ----------
+
+function formatMoney(n) {
+  return "$" + Math.round(n).toLocaleString("es-CO");
+}
+
+function estadoPagoDe(guiaRow, pagoRow) {
+  if (pagoRow) return "PAGADA";
+  const fase = faseDe(guiaRow.estado);
+  if (fase === "devuelta")  return "DEVUELTA";
+  if (fase === "entregada") return "PENDIENTE";
+  return "OTRO";
+}
+
+async function cargarTablero() {
+  document.getElementById("tbody").innerHTML = '<tr><td colspan="14" class="empty">Cargando datos del tablero...</td></tr>';
+  try {
+    [guiasData, pagosData] = await Promise.all([
+      supabaseSelect("envia_guias"),
+      supabaseSelect("envia_pagos")
+    ]);
+    document.getElementById("lastSync").textContent = "Actualizado: " + new Date().toLocaleString("es-CO");
+    renderPendientesCobro();
+    renderTotalPorCobrar(renderDineroEnCamino());
+    renderDineroFrenado();
+    renderCatalogoEstados();
+    renderTablero();
+  } catch (err) {
+    document.getElementById("tbody").innerHTML = `<tr><td colspan="14" class="empty">Error cargando datos: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+// ---- Panel: entregadas pendientes de cobro ----
+// ENVIA consigna a los 4 días de entregar (mediana medida sobre 337 guías; p90 = 6 días,
+// máximo observado 13). Por eso los tramos de antigüedad son 0-7 / 8-15 / 16+.
+const TRAMOS = [
+  { id:"ok",      label:"Al día (0–7 días)",        min:0,  max:7,        clase:"ok",
+    hint:"Dentro del plazo normal de ENVIA." },
+  { id:"aviso",   label:"Atrasadas (8–15 días)",    min:8,  max:15,       clase:"aviso",
+    hint:"Ya pasaron el plazo habitual. Vale preguntar." },
+  { id:"reclamo", label:"Para reclamar (16+ días)", min:16, max:Infinity, clase:"reclamo",
+    hint:"Muy por fuera del plazo. Reclamar a ENVIA." },
+];
+let filtroTramo = "";
+
+function tramoDe(dias){
+  if (dias === null) return null;
+  return TRAMOS.find(t => dias >= t.min && dias <= t.max) || null;
+}
+
+function renderPendientesCobro() {
+  const pagados = new Set(pagosData.map(p => p.guia));
+  const hoy = hoyISO();
+
+  const pend = guiasData
+    .filter(g => esEntregada(g.estado) && !pagados.has(g.guia) && (Number(g.valor_producto) || 0) > 0)
+    .map(g => ({ g, dias: diasEntre(g.fec_entrega, hoy) }))
+    .sort((a, b) => (b.dias ?? -1) - (a.dias ?? -1));
+
+  const total = pend.reduce((s, x) => s + (Number(x.g.valor_producto) || 0), 0);
+  document.getElementById("cobroTotal").textContent = formatMoney(total);
+  document.getElementById("cobroSub").textContent =
+    pend.length ? `en ${pend.length} guía(s) entregada(s) sin consignar` : "no hay nada pendiente de cobro";
+
+  // Tramos de antigüedad
+  const porTramo = {};
+  TRAMOS.forEach(t => porTramo[t.id] = { n:0, v:0 });
+  let sinFecha = { n:0, v:0 };
+  pend.forEach(({ g, dias }) => {
+    const t = tramoDe(dias);
+    const destino = t ? porTramo[t.id] : sinFecha;
+    destino.n++;
+    destino.v += Number(g.valor_producto) || 0;
+  });
+
+  document.getElementById("edadGrid").innerHTML = TRAMOS.map(t => {
+    const d = porTramo[t.id];
+    const activo = filtroTramo === t.id ? " active" : "";
+    // La explicación va como texto fijo dentro de la caja, no como tooltip del
+    // navegador: el globo nativo se montaba encima de la caja de al lado y tapaba
+    // justo la cifra de "Para reclamar".
+    return `<button class="edad-box ${t.clase}${activo}" data-tramo="${t.id}">
+      <span class="en">${esc(t.label)}</span>
+      <span class="ev">${formatMoney(d.v)}</span>
+      <span class="em">${d.n} guía(s)</span>
+      <span class="eh">${esc(t.hint)}</span>
+    </button>`;
+  }).join("") + (sinFecha.n ? `<div class="edad-box">
+      <span class="en">Sin fecha de entrega</span>
+      <span class="ev">${formatMoney(sinFecha.v)}</span>
+      <span class="em">${sinFecha.n} guía(s)</span>
+      <span class="eh">El archivo no traía fecha de entrega.</span></div>` : "");
+
+  document.getElementById("edadGrid").querySelectorAll(".edad-box[data-tramo]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      filtroTramo = (filtroTramo === btn.dataset.tramo) ? "" : btn.dataset.tramo;
+      renderPendientesCobro();
+    });
+  });
+
+  const visibles = filtroTramo
+    ? pend.filter(({ dias }) => (tramoDe(dias) || {}).id === filtroTramo)
+    : pend;
+
+  const tb = document.getElementById("tbodyCobro");
+  if (!visibles.length) {
+    tb.innerHTML = `<tr><td colspan="7" class="empty">${pend.length ? "Ningún pendiente en este tramo." : "Nada pendiente de cobro."}</td></tr>`;
+  } else {
+    tb.innerHTML = visibles.map(({ g, dias }) => {
+      const t = tramoDe(dias);
+      const badge = t ? `<span class="dias-badge ${t.clase}">${dias}</span>` : "—";
+      return `<tr>
+        <td>${esc(g.guia)}</td>
+        <td>${esc(g.fec_entrega || "")}</td>
+        <td class="num">${badge}</td>
+        <td class="num">${formatMoney(g.valor_producto || 0)}</td>
+        <td>${esc(g.nombre_destinatario || "")}</td>
+        <td>${esc(g.ciudad_destino || "")}</td>
+        <td>${esc(g.tel_destinatario || "")}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  const reclamo = porTramo["reclamo"];
+  document.getElementById("cobroNota").innerHTML = pend.length
+    ? `Mostrando ${visibles.length} de ${pend.length} guía(s)${filtroTramo ? " (filtrado por tramo — clic de nuevo para quitar)" : ""}.` +
+      (reclamo.n ? ` <strong style="color:var(--red)">Hay ${reclamo.n} guía(s) por ${formatMoney(reclamo.v)} con más de 15 días sin consignar.</strong>` : "")
+    : `Si esperabas ver pendientes acá, revisá que hayas subido el archivo de pagos más reciente.`;
+}
+
+// ---- Panel: dinero en camino ----
+// Recaudo de guías ya despachadas que aún no llegan a destino. No incluye las
+// devueltas (recaudo 0) ni las que ya tienen pago registrado.
+// ENVIA consigna ~4 días después de entregar, así que el cobro estimado de una
+// guía en camino es su fecha prevista de entrega + 4 días.
+const DIAS_PAGO_TRAS_ENTREGA = 4;
+
+const TRAMOS_CAMINO = [
+  { id:"ruta",    label:"En ruta",            clase:"ruta",
+    hint:"Dentro de la fecha prevista de entrega." },
+  { id:"atasco",  label:"Atrasadas (1–7 días)", clase:"atasco",
+    hint:"Pasó la fecha prevista. Suelen destrabarse solas." },
+  { id:"frenado", label:"Frenadas (8+ días)",  clase:"frenado",
+    hint:"Muy pasadas de fecha. Hay que empujarlas o se vuelven devolución." },
+];
+let filtroCamino = "";
+
+function sumarDias(iso, n){
+  if (!iso) return null;
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function tramoCaminoDe(atraso){
+  if (atraso === null) return null;
+  if (atraso <= 0) return TRAMOS_CAMINO[0];
+  if (atraso <= 7) return TRAMOS_CAMINO[1];
+  return TRAMOS_CAMINO[2];
+}
+
+function renderDineroEnCamino() {
+  const pagados = new Set(pagosData.map(p => p.guia));
+  const hoy = hoyISO();
+
+  const camino = guiasData
+    .filter(g => {
+      const f = faseDe(g.estado);
+      return f !== "entregada" && f !== "devuelta"
+          && !pagados.has(g.guia) && (Number(g.valor_producto) || 0) > 0;
+    })
+    .map(g => {
+      // atraso respecto de la fecha prevista de entrega (positivo = va tarde)
+      const atraso = g.fec_aprox_entrega ? diasEntre(g.fec_aprox_entrega, hoy) : null;
+      const cobro  = sumarDias(g.fec_aprox_entrega, DIAS_PAGO_TRAS_ENTREGA);
+      return { g, atraso, cobro, tramo: tramoCaminoDe(atraso) };
+    })
+    .sort((a, b) => (b.atraso ?? -999) - (a.atraso ?? -999));
+
+  const total = camino.reduce((s, x) => s + Number(x.g.valor_producto), 0);
+  document.getElementById("caminoTotal").textContent = formatMoney(total);
+  document.getElementById("caminoSub").textContent =
+    camino.length ? `en ${camino.length} guía(s) despachada(s) sin entregar` : "no hay nada en camino";
+
+  // Tramos
+  const porTramo = {};
+  TRAMOS_CAMINO.forEach(t => porTramo[t.id] = { n:0, v:0 });
+  let sinFecha = { n:0, v:0 };
+  camino.forEach(x => {
+    const d = x.tramo ? porTramo[x.tramo.id] : sinFecha;
+    d.n++; d.v += Number(x.g.valor_producto) || 0;
+  });
+
+  const grid = document.getElementById("caminoGrid");
+  grid.innerHTML = TRAMOS_CAMINO.map(t => {
+    const d = porTramo[t.id];
+    const activo = filtroCamino === t.id ? " active" : "";
+    return `<button class="edad-box ${t.clase}${activo}" data-tramo="${t.id}">
+      <span class="en">${esc(t.label)}</span>
+      <span class="ev">${formatMoney(d.v)}</span>
+      <span class="em">${d.n} guía(s)</span>
+      <span class="eh">${esc(t.hint)}</span>
+    </button>`;
+  }).join("") + (sinFecha.n ? `<div class="edad-box">
+      <span class="en">Sin fecha prevista</span>
+      <span class="ev">${formatMoney(sinFecha.v)}</span>
+      <span class="em">${sinFecha.n} guía(s)</span>
+      <span class="eh">El archivo no traía fecha aproximada de entrega.</span></div>` : "");
+
+  grid.querySelectorAll(".edad-box[data-tramo]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      filtroCamino = (filtroCamino === btn.dataset.tramo) ? "" : btn.dataset.tramo;
+      renderDineroEnCamino();
+    });
+  });
+
+  const visibles = filtroCamino
+    ? camino.filter(x => (x.tramo || {}).id === filtroCamino)
+    : camino;
+
+  const tb = document.getElementById("tbodyCamino");
+  if (!visibles.length) {
+    tb.innerHTML = `<tr><td colspan="9" class="empty">${camino.length ? "Nada en este tramo." : "Nada en camino."}</td></tr>`;
+  } else {
+    tb.innerHTML = visibles.map(({ g, atraso, cobro, tramo }) => {
+      const badge = atraso === null ? "—"
+        : atraso <= 0 ? `<span class="dias-badge ok">a tiempo</span>`
+        : `<span class="dias-badge ${tramo.clase === "frenado" ? "reclamo" : "aviso"}">${atraso}</span>`;
+      return `<tr>
+        <td>${esc(g.guia)}</td>
+        <td><span class="est ${faseDe(g.estado)}">${esc(normEstado(g.estado))}</span></td>
+        <td>${esc(g.fec_captura || "")}</td>
+        <td>${esc(g.fec_aprox_entrega || "")}</td>
+        <td class="num">${badge}</td>
+        <td class="num">${formatMoney(g.valor_producto || 0)}</td>
+        <td>${esc(cobro || "—")}</td>
+        <td>${esc(g.nombre_destinatario || "")}</td>
+        <td>${esc(g.ciudad_destino || "")}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  // Tasa histórica de devolución, para no prometer de más
+  const cerradas = guiasData.filter(g => ["entregada","devuelta"].includes(faseDe(g.estado)));
+  const devueltas = cerradas.filter(g => faseDe(g.estado) === "devuelta").length;
+  const tasaDev = cerradas.length ? devueltas / cerradas.length : 0;
+  const esperado = total * (1 - tasaDev);
+
+  const frenado = porTramo["frenado"];
+  document.getElementById("caminoNota").innerHTML = camino.length
+    ? `Mostrando ${visibles.length} de ${camino.length} guía(s)${filtroCamino ? " (filtrado — clic de nuevo para quitar)" : ""}. ` +
+      `El <strong>cobro estimado</strong> es la fecha prevista de entrega más ${DIAS_PAGO_TRAS_ENTREGA} días, que es lo que ENVIA suele tardar en consignar. ` +
+      `Históricamente se devuelve el <strong>${(tasaDev*100).toFixed(1)}%</strong> de lo despachado, así que de estos ${formatMoney(total)} contá con recibir alrededor de <strong>${formatMoney(esperado)}</strong>.` +
+      (frenado.n ? ` <strong style="color:var(--red)">Hay ${frenado.n} guía(s) por ${formatMoney(frenado.v)} con más de 8 días de atraso: esas no avanzan solas.</strong>` : "")
+    : `Todo lo despachado ya llegó a destino.`;
+
+  return { n: camino.length, total, esperado, tasaDev };
+}
+
+// ---- Panel: dinero frenado ----
+// Guías abiertas que no avanzan solas: o están en un estado de problema, o ya
+// pasaron 8+ días de la fecha prevista de entrega. Son las que hay que reclamar.
+const DIAS_FRENADO = 8;
+let filtroMotivo = "";
+
+function guiasFrenadas() {
+  const pagados = new Set(pagosData.map(p => p.guia));
+  const hoy = hoyISO();
+  return guiasData
+    .filter(g => {
+      const f = faseDe(g.estado);
+      if (f === "entregada" || f === "devuelta") return false;
+      if (pagados.has(g.guia) || (Number(g.valor_producto) || 0) <= 0) return false;
+      const atraso = g.fec_aprox_entrega ? diasEntre(g.fec_aprox_entrega, hoy) : null;
+      return f === "problema" || (atraso !== null && atraso >= DIAS_FRENADO);
+    })
+    .map(g => ({
+      g,
+      atraso: g.fec_aprox_entrega ? diasEntre(g.fec_aprox_entrega, hoy) : null,
+      motivo: (g.des_novedad || "").trim() || "(sin novedad registrada)"
+    }))
+    .sort((a, b) => (b.atraso ?? -1) - (a.atraso ?? -1));
+}
+
+function textoParaEnvia(lista) {
+  const hoy = new Date().toLocaleDateString("es-CO");
+  const total = lista.reduce((s, x) => s + Number(x.g.valor_producto), 0);
+  const lineas = lista.map(({ g, atraso, motivo }) =>
+    `${g.guia} | ${formatMoney(g.valor_producto)} | ${atraso ?? "?"} días de atraso | ` +
+    `${normEstado(g.estado)} | ${motivo} | ${g.nombre_destinatario || ""} | ` +
+    `${g.ciudad_destino || ""} | Tel ${g.tel_destinatario || "—"}`
+  );
+  return [
+    `Cuenta 6-290-2 — TIENDA BARON RECAUDO — NIT 37723973-9`,
+    `Guías detenidas al ${hoy}: ${lista.length} por ${formatMoney(total)}`,
+    ``,
+    ...lineas,
+    ``,
+    `Solicito gestión sobre estas guías e informe del estado de cada una.`
+  ].join("\n");
+}
+
+function renderDineroFrenado() {
+  const todas = guiasFrenadas();
+  const total = todas.reduce((s, x) => s + Number(x.g.valor_producto), 0);
+
+  document.getElementById("frenTotal").textContent = formatMoney(total);
+  document.getElementById("frenSub").textContent =
+    todas.length ? `en ${todas.length} guía(s) detenida(s)` : "nada detenido";
+
+  // Chips por motivo de novedad
+  const porMotivo = {};
+  todas.forEach(x => { (porMotivo[x.motivo] ||= { n:0, v:0 }); porMotivo[x.motivo].n++; porMotivo[x.motivo].v += Number(x.g.valor_producto); });
+
+  const cont = document.getElementById("frenMotivos");
+  cont.innerHTML = Object.entries(porMotivo).sort((a,b) => b[1].v - a[1].v).map(([m, d]) => {
+    const activo = filtroMotivo === m ? " active" : "";
+    return `<button class="motivo${activo}" data-motivo="${esc(m)}">
+      <span class="mn">${esc(m)}</span>
+      <span class="mv">${formatMoney(d.v)}</span><span class="mc">${d.n} guía(s)</span>
+    </button>`;
+  }).join("");
+  cont.querySelectorAll(".motivo").forEach(btn => {
+    btn.addEventListener("click", () => {
+      filtroMotivo = (filtroMotivo === btn.dataset.motivo) ? "" : btn.dataset.motivo;
+      renderDineroFrenado();
+    });
+  });
+
+  const visibles = filtroMotivo ? todas.filter(x => x.motivo === filtroMotivo) : todas;
+
+  const tb = document.getElementById("tbodyFrenado");
+  if (!visibles.length) {
+    tb.innerHTML = `<tr><td colspan="10" class="empty">${todas.length ? "Nada con este motivo." : "Ninguna guía detenida. Todo avanza."}</td></tr>`;
+  } else {
+    tb.innerHTML = visibles.map(({ g, atraso, motivo }) => `
+      <tr>
+        <td>${esc(g.guia)}</td>
+        <td class="num"><span class="dias-badge ${atraso >= 30 ? "reclamo" : "aviso"}">${atraso ?? "—"}</span></td>
+        <td class="num">${formatMoney(g.valor_producto || 0)}</td>
+        <td><span class="est ${faseDe(g.estado)}">${esc(normEstado(g.estado))}</span></td>
+        <td class="nov-txt">${esc(motivo)}</td>
+        <td>${esc(g.fec_novedad || "")}</td>
+        <td>${esc(g.nombre_destinatario || "")}</td>
+        <td>${esc(g.ciudad_destino || "")}</td>
+        <td>${esc(g.tel_destinatario || "")}</td>
+        <td>${esc(g.imputabilidad || "")}</td>
+      </tr>`).join("");
+  }
+
+  const viejas = todas.filter(x => (x.atraso ?? 0) >= 30);
+  document.getElementById("frenNota").innerHTML = todas.length
+    ? `Mostrando ${visibles.length} de ${todas.length} guía(s)${filtroMotivo ? " (filtrado por motivo — clic de nuevo para quitar)" : ""}. ` +
+      `Se cuenta como detenida toda guía que lleve ${DIAS_FRENADO}+ días pasada de su fecha prevista de entrega, o que esté en estado de problema. ` +
+      (viejas.length
+        ? `<strong style="color:var(--red)">${viejas.length} llevan más de 30 días: ${formatMoney(viejas.reduce((s,x)=>s+Number(x.g.valor_producto),0))}.</strong> `
+        : "") +
+      `La columna <em>Imput.</em> es el código de imputabilidad que pone ENVIA, o sea a quién le atribuyen la novedad.`
+    : `Ninguna guía detenida.`;
+
+  // Botón de copiar
+  const btn = document.getElementById("btnCopiarFrenado");
+  btn.style.display = todas.length ? "" : "none";
+  btn.onclick = async () => {
+    const txt = textoParaEnvia(visibles);
+    try {
+      await navigator.clipboard.writeText(txt);
+    } catch (e) {
+      // file:// o permisos: caemos al método viejo
+      const ta = document.createElement("textarea");
+      ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+    const antes = btn.textContent;
+    btn.textContent = `✓ ${visibles.length} guía(s) copiada(s)`;
+    btn.classList.add("ok");
+    setTimeout(() => { btn.textContent = antes; btn.classList.remove("ok"); }, 2500);
+  };
+
+  return { n: todas.length, total };
+}
+
+// ---- Panel: total por cobrar ----
+
+function renderTotalPorCobrar(camino) {
+  const pagados = new Set(pagosData.map(p => p.guia));
+  const pend = guiasData.filter(g =>
+    esEntregada(g.estado) && !pagados.has(g.guia) && (Number(g.valor_producto) || 0) > 0);
+  const vPend = pend.reduce((s, g) => s + Number(g.valor_producto), 0);
+
+  const set = (id, v) => document.getElementById(id).textContent = v;
+  set("tcEntregado",  formatMoney(vPend));
+  set("tcEntregadoN", `${pend.length} guía(s) entregada(s)`);
+  set("tcCamino",     formatMoney(camino.total));
+  set("tcCaminoN",    `${camino.n} guía(s) en tránsito`);
+  set("tcTotal",      formatMoney(vPend + camino.total));
+  set("tcTotalN",     `${pend.length + camino.n} guía(s)`);
+
+  document.getElementById("tcNota").innerHTML =
+    `Lo ya entregado es dinero que ENVIA tiene en la mano y debe consignarte. Lo que está en camino todavía depende de que la entrega salga bien: ` +
+    `descontando la tasa histórica de devolución, de ese tramo esperá alrededor de <strong>${formatMoney(camino.esperado)}</strong>, ` +
+    `lo que deja una expectativa realista de <strong>${formatMoney(vPend + camino.esperado)}</strong>.`;
+}
+
+// ---- Panel: catálogo de estados ----
+
+function renderCatalogoEstados() {
+  const cont = document.getElementById("catalogoEstados");
+  if (!guiasData.length) {
+    cont.innerHTML = '<div class="empty">Sin datos cargados. Subí un archivo de ENVIA para ver los estados.</div>';
+    document.getElementById("estadosResumen").textContent = "";
+    return;
+  }
+
+  // Agrupa por estado tal cual viene de ENVIA
+  const porEstado = {};
+  guiasData.forEach(g => {
+    const e = normEstado(g.estado) || "(SIN ESTADO)";
+    if (!porEstado[e]) porEstado[e] = { n: 0, valor: 0 };
+    porEstado[e].n++;
+    porEstado[e].valor += Number(g.valor_producto) || 0;
+  });
+
+  const porFase = {};
+  Object.keys(porEstado).forEach(e => {
+    const f = faseDe(e);
+    (porFase[f] = porFase[f] || []).push(e);
+  });
+
+  let html = "";
+  FASE_ORDEN.forEach(fase => {
+    const estados = porFase[fase];
+    if (!estados || !estados.length) return;
+    const totalN = estados.reduce((s,e) => s + porEstado[e].n, 0);
+    html += `<div class="fase-group">
+      <div class="fase-title"><span class="fase-dot ${fase}"></span>${esc(FASE_LABEL[fase])} — ${totalN} guía(s)</div>
+      <div class="estado-chips">`;
+    estados.sort((a,b) => porEstado[b].n - porEstado[a].n).forEach(e => {
+      const d = porEstado[e];
+      const activo = filtroEstadoEnvia === e ? " active" : "";
+      const tag = fase === "desconocido" ? '<span class="nuevo-tag">NUEVO</span>' : "";
+      html += `<button class="chip ${fase}${activo}" data-estado="${esc(e)}">
+        <span class="cn">${esc(e)}${tag}</span>
+        <span class="cv">${d.n}</span><span class="cm">${formatMoney(d.valor)}</span>
+      </button>`;
+    });
+    html += `</div></div>`;
+  });
+
+  cont.innerHTML = html;
+  cont.querySelectorAll(".chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const e = btn.dataset.estado;
+      filtroEstadoEnvia = (filtroEstadoEnvia === e) ? "" : e;
+      document.getElementById("fEstadoEnvia").value = filtroEstadoEnvia;
+      renderCatalogoEstados();
+      renderTablero();
+    });
+  });
+
+  const nEstados = Object.keys(porEstado).length;
+  document.getElementById("estadosResumen").textContent =
+    `— ${nEstados} estado(s) distinto(s) en los datos · clic para filtrar`;
+
+  // Rellena el <select> con los estados presentes
+  const sel = document.getElementById("fEstadoEnvia");
+  const actual = filtroEstadoEnvia;
+  sel.innerHTML = '<option value="">Todos los estados de ENVIA</option>' +
+    Object.keys(porEstado).sort().map(e =>
+      `<option value="${esc(e)}">${esc(e)} (${porEstado[e].n})</option>`).join("");
+  sel.value = actual;
+}
+
+// ---- Tabla ----
+
+function renderTablero() {
+  const pagosByGuia = {};
+  pagosData.forEach(p => pagosByGuia[p.guia] = p);
+
+  const filtroPago = document.getElementById("fPago").value;
+  const filtroTexto = document.getElementById("fBusqueda").value.trim().toLowerCase();
+  const hoy = hoyISO();
+
+  // --- Tarjetas: siempre sobre el total, no sobre el filtro ---
+  let totalProducto = 0, totalPagado = 0, totalFlete = 0, fleteSinFactura = 0;
+  let pagadas = 0, pendientes = 0, pendienteValor = 0;
+
+  guiasData.forEach(g => {
+    const pago = pagosByGuia[g.guia];
+    const estadoPago = estadoPagoDe(g, pago);
+    totalProducto += Number(g.valor_producto) || 0;
+    totalFlete += Number(g.total_flete) || 0;
+    if (!(g.factura || "").trim()) fleteSinFactura += Number(g.total_flete) || 0;
+    if (estadoPago === "PAGADA") { pagadas++; totalPagado += Number(pago.valor_producto) || 0; }
+    if (estadoPago === "PENDIENTE") { pendientes++; pendienteValor += Number(g.valor_producto) || 0; }
+  });
+
+  document.getElementById("cTotal").textContent = guiasData.length;
+  document.getElementById("cPagadas").textContent = pagadas;
+  document.getElementById("cPendientes").textContent = pendientes;
+  document.getElementById("cPendientesVal").textContent = formatMoney(pendienteValor) + " por cobrar";
+  document.getElementById("cValorProducto").textContent = formatMoney(totalProducto);
+  document.getElementById("cPagado").textContent = formatMoney(totalPagado);
+  document.getElementById("cFlete").textContent = formatMoney(totalFlete);
+  document.getElementById("cFleteSinFact").textContent = formatMoney(fleteSinFactura) + " sin factura";
+
+  // --- Filas filtradas ---
+  const filas = guiasData.map(g => {
+    const pago = pagosByGuia[g.guia];
+    return { g, pago, estadoPago: estadoPagoDe(g, pago), fase: faseDe(g.estado) };
+  }).filter(({ g, estadoPago }) => {
+    if (filtroEstadoEnvia && normEstado(g.estado) !== filtroEstadoEnvia) return false;
+    if (filtroPago && estadoPago !== filtroPago) return false;
+    if (filtroTexto) {
+      const haystack = `${g.guia} ${g.nombre_destinatario} ${g.ciudad_destino}`.toLowerCase();
+      if (!haystack.includes(filtroTexto)) return false;
+    }
+    return true;
+  }).sort((a, b) => (b.g.fec_captura || "").localeCompare(a.g.fec_captura || ""));
+
+  const tbody = document.getElementById("tbody");
+  const resumenEl = document.getElementById("tablaResumen");
+
+  if (!filas.length) {
+    tbody.innerHTML = '<tr><td colspan="14" class="empty">No hay guías para mostrar con estos filtros.</td></tr>';
+    resumenEl.textContent = "";
+    return;
+  }
+
+  const badgeClass = { PAGADA: "pagada", PENDIENTE: "pendiente", DEVUELTA: "devuelta", OTRO: "otro" };
+  const badgeLabel = { PAGADA: "Pagada", PENDIENTE: "Pendiente", DEVUELTA: "Devuelta", OTRO: "En proceso" };
+
+  tbody.innerHTML = filas.map(({ g, pago, estadoPago, fase }) => {
+    // Días: desde despacho hasta entrega; si sigue abierta, desde despacho hasta hoy.
+    const dias = g.fec_entrega
+      ? diasEntre(g.fec_captura, g.fec_entrega)
+      : diasEntre(g.fec_captura, hoy);
+    const diasTxt = dias === null ? "" : (g.fec_entrega ? `${dias}` : `${dias} ⏳`);
+    const novClase = esEntregada(g.estado) ? "nov old" : "nov";
+    return `
+    <tr>
+      <td>${esc(g.guia)}</td>
+      <td><span class="est ${fase}">${esc(normEstado(g.estado) || "(sin estado)")}</span></td>
+      <td class="${novClase}" title="${esc(g.des_novedad || "")}">${esc(g.des_novedad || "")}</td>
+      <td><span class="badge ${badgeClass[estadoPago]}">${badgeLabel[estadoPago]}</span></td>
+      <td>${esc(g.nombre_destinatario || "")}</td>
+      <td>${esc(g.ciudad_destino || "")}</td>
+      <td>${esc(g.fec_captura || "")}</td>
+      <td>${esc(g.fec_entrega || "")}</td>
+      <td class="num">${diasTxt}</td>
+      <td class="num">${formatMoney(g.valor_producto || 0)}</td>
+      <td class="num">${formatMoney(g.total_flete || 0)}</td>
+      <td>${esc(g.factura || "")}</td>
+      <td>${esc(pago ? pago.num_traslado : "")}</td>
+      <td>${esc(pago ? pago.fec_traslado : "")}</td>
+    </tr>`;
+  }).join("");
+
+  const sumaFiltrada = filas.reduce((s, f) => s + (Number(f.g.valor_producto) || 0), 0);
+  resumenEl.textContent = `Mostrando ${filas.length} de ${guiasData.length} guías · ${formatMoney(sumaFiltrada)} en valor producto.`;
+}
+
+// ---------- Eventos ----------
+
+document.getElementById("btnRefresh").addEventListener("click", cargarTablero);
+document.getElementById("fPago").addEventListener("change", renderTablero);
+document.getElementById("fBusqueda").addEventListener("input", renderTablero);
+document.getElementById("fEstadoEnvia").addEventListener("change", (e) => {
+  filtroEstadoEnvia = e.target.value;
+  renderCatalogoEstados();
+  renderTablero();
+});
+document.getElementById("btnClear").addEventListener("click", () => {
+  filtroEstadoEnvia = "";
+  document.getElementById("fEstadoEnvia").value = "";
+  document.getElementById("fPago").value = "";
+  document.getElementById("fBusqueda").value = "";
+  renderCatalogoEstados();
+  renderTablero();
+});
+
+// --- Hooks de prueba. Solo se activan si un arnés externo define __ARNES_TEST__.
+//     En el navegador esta condición es falsa y el bloque no hace nada. ---
+if (typeof globalThis !== "undefined" && globalThis.__ARNES_TEST__) {
+  globalThis.__test = {
+    set: (g, p) => { guiasData = g; pagosData = p; },
+    renderPendientesCobro, renderCatalogoEstados, renderTablero,
+    renderDineroEnCamino, renderTotalPorCobrar, renderDineroFrenado,
+    guiasFrenadas, textoParaEnvia,
+    FASE_DE_ESTADO, TRAMOS, TRAMOS_CAMINO, DIAS_PAGO_TRAS_ENTREGA, DIAS_FRENADO, sumarDias
+  };
+}
+
+cargarTablero();
+</script>
+</body>
+</html>
